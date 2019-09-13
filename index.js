@@ -6,6 +6,7 @@ const
   express = require('express'),
   body_parser = require('body-parser'),
   app = express().use(body_parser.json()); // creates express http server
+  schedule = require('node-schedule');
   require('dotenv').config();
 
 // Sets server port and logs message on success
@@ -88,8 +89,26 @@ function handleMessage(sender_psid, received_message) {
     // Create the payload for a basic text message, which
     // will be added to the body of our request to the Send API
     response = {
-      "text": `You sent the message: "${received_message.text}". Try sending me an attachment!`
+      "text": `You sent the message: "${received_message.text}".`
     }
+
+    var split = received_message.text.split(" ");
+
+    //case: remindme 
+    if (split[0] == 'remindme') && (split.length == 4) {
+      // get current date
+      currdate = getDate()
+      // check how long does the user wants to be notified in the future
+      if (split[2] == 'seconds' or split[2] == 'second') {
+        // add time
+        var scheddate = Date(currdate[0], currdate[1], currdate[2], currdate[3], currdate[4], currdate[5]+parseInt(split[1]));
+        response1 = {"text": split[4]}
+        schedule.scheduleJob(scheddate, callSendAPI(sender_psid, response1));
+      }
+    } else {
+      callSendAPI(sender_psid, response)
+    }
+
   } else if (received_message.attachments) {
     // Get the URL of the message attachment
     let attachment_url = received_message.attachments[0].payload.url;
@@ -118,10 +137,8 @@ function handleMessage(sender_psid, received_message) {
         }
       }
     }
+    callSendAPI(sender_psid, response);
   } 
-  
-  // Send the response message
-  callSendAPI(sender_psid, response);    
 }
 
 function handlePostback(sender_psid, received_postback) {
@@ -162,4 +179,9 @@ function callSendAPI(sender_psid, response) {
       console.error("Unable to send message:" + err);
     }
   }); 
+}
+
+function getDate() {
+  var currentdate = new Date(); 
+  return = [currentdate.getFullYear(), currentdate.getMonth(), currentdate.getDate(), currentdate.getHours(), currentDate.getMinutes(), current.getSeconds()]
 }
